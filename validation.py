@@ -27,23 +27,23 @@ cv_symReg = cross_validate(
 print(cv_symReg)
 
 # Leave one out cross validation Gaussian Process Regression
-# noise_est = 0.1
-# kernel = 1 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e2)) + WhiteKernel(noise_est**2)
-# gp = GaussianProcessRegressor(
-#     kernel=kernel, n_restarts_optimizer=9
-# )
+noise_est = 0.1
+kernel = 1 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e2)) + WhiteKernel(noise_est**2)
+gp = GaussianProcessRegressor(
+    kernel=kernel, n_restarts_optimizer=9
+)
 
-# cv_gp = cross_validate(
-#     gp,
-#     X,
-#     y,
-#     scoring=('neg_root_mean_squared_error',
-#              'neg_mean_absolute_error'),
-#     cv=y.size-1,
-#     return_train_score=True
-# )
+cv_gp = cross_validate(
+    gp,
+    X,
+    y,
+    scoring=('neg_root_mean_squared_error',
+             'neg_mean_absolute_error'),
+    cv=y.size-1,
+    return_train_score=True
+)
 
-# print(cv_gp)
+print(cv_gp)
 
 
 
