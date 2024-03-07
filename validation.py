@@ -28,7 +28,7 @@ print(cv_symReg)
 
 # Leave one out cross validation Gaussian Process Regression
 noise_est = 0.1
-kernel = 1 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e2)) + WhiteKernel(noise_est**2)
+kernel = 1* RBF(length_scale=1.0, length_scale_bounds=(1e-5, 1e10)) + WhiteKernel(noise_est**2, noise_level_bounds=(1e-10, 1e10))
 gp = GaussianProcessRegressor(
     kernel=kernel, n_restarts_optimizer=9
 )
