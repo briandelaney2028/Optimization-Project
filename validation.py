@@ -13,21 +13,21 @@ y = data['Vx'].values
 # cross validation Symbolic Regression
 symReg = SymReg.SymReg()
 
-# cv_symReg = cross_validate(
-#     symReg,
-#     X,
-#     y,
-#     fit_params={'epochs':10,
-#             'complexity':10},
-#     scoring=('neg_root_mean_squared_error',
-#              'neg_mean_absolute_error'),
-#     cv=10,
-#     return_train_score=True
-# )
+cv_symReg = cross_validate(
+    symReg,
+    X,
+    y,
+    fit_params={'epochs':10,
+            'complexity':10},
+    scoring=('neg_root_mean_squared_error',
+             'neg_mean_absolute_error'),
+    cv=10,
+    return_train_score=True
+)
 
-# print(cv_symReg)
-# print("Avg Symbolic Regression Test RMSE: {}".format(np.mean(cv_symReg['test_neg_root_mean_squared_error'])))
-# print("Avg Symbolic Regression Test MAE: {}".format(np.mean(cv_symReg['test_neg_mean_absolute_error'])))
+print(cv_symReg)
+print("Avg Symbolic Regression Test RMSE: {}".format(np.mean(cv_symReg['test_neg_root_mean_squared_error'])))
+print("Avg Symbolic Regression Test MAE: {}".format(np.mean(cv_symReg['test_neg_mean_absolute_error'])))
 
 X = data.drop('Vx', axis=1).values
 # cross validation Neural Network
