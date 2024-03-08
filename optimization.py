@@ -1,6 +1,6 @@
-import pickle
+import NeuralNet
 import feyn
-from scipy.optimize import minimize, LinearConstraint
+from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,13 +12,13 @@ y = data['Vx'].values
 # lead Symbolic Regressor
 symReg = feyn.Model.load('symReg.json')
 
-# load guassian process regressor
-with open('gp.pkl', 'rb') as f:
-    gp = pickle.load(f)
+# load Neural Network
+NN = NeuralNet.NeuralNetwork()
+NN.load("NN.keras")
 
 # intial guess
 # [X, Density, Incline Factor, Fluid-Wall Interaction, Wall Speed]
-x0 = [0.0, 0.8, 0.3, 0.95, 0.75]
+x0 = np.array([300.0, 0.8, 0.3, 0.95, 0.75])
 
 
 # define bounds
@@ -35,13 +35,13 @@ options = {
 }
 
 # Target wall speed
-v_wall = 7
+v_wall = 1.1
 # Target delta x
-delta_x = 4
+delta_x = 300
 # tolerance
 epsilon = 0.01
 
-# constraints
+# Linear constraints
 A = np.array([
     [1, 0, 0, 0, 0],
     [1, 0, 0, 0, 0]
@@ -56,6 +56,14 @@ def func_symReg(x):
     df = pd.DataFrame(x, columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
     return np.power(symReg.predict(df)-v_wall, 2)
 
+# nonlinear constraints for Symbolic Regression
+def noncon_sym(x):
+    x_prime = np.zeros(5)
+    for i in range(1, 5):
+        x_prime[i] = x[i]
+    df = pd.DataFrame(x_prime.reshape(1,-1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
+    return symReg.predict(df)
+nc_sym = NonlinearConstraint(noncon_sym, -0.1, 0.1)
 
 # Symbolic Regression optimizaiton
 results_symReg = minimize(
@@ -64,48 +72,56 @@ results_symReg = minimize(
     method='SLSQP',
     bounds=bounds,
     options=options,
-    constraints=c
+    constraints=(c, nc_sym)
 )
 
-# optimization function for gaussian process regression
-func_gp = lambda x: np.power(gp.predict(x.reshape(1, -1)) - v_wall, 2)
+# optimization function for Neural Network 
+func_NN = lambda x: np.power(NN.predict(x.reshape(1, -1)) - v_wall, 2)
 
-# Gaussian Process Regression optimization
-results_gp = minimize(
-    func_gp,
+# nonlinear constraints for Neural Network
+def noncon_NN(x):
+    x_prime = np.zeros(5)
+    for i in range(1, 5):
+        x_prime[i] = x[i]
+    return np.sum(NN.predict(x_prime.reshape(1, -1)))
+nc_NN = NonlinearConstraint(noncon_NN, -0.1, 0.1)
+
+# Neural Network optimization
+results_NN = minimize(
+    func_NN,
     x0,
     method='SLSQP',
     bounds=bounds,
     options=options,
-    constraints=c
+    constraints=(c, nc_NN)
 )
 
-for key in results_gp.keys():
+for key in results_NN.keys():
     print("-------------- {} --------------".format(key))
-    print("Symbolic Regression:         {}".format(results_symReg[key]))
-    print("Gaussian Process Regression: {}".format(results_gp[key]))
+    print("Symbolic Regression: {}".format(results_symReg[key]))
+    print("Neural Network     : {}".format(results_NN[key]))
 
 
 # plotting
 n = 10
 x_sym = np.linspace(0, results_symReg['x'][0], n)
-x_gp = np.linspace(0, results_gp['x'][0], n)
+x_NN = np.linspace(0, results_NN['x'][0], n)
 y_sym = np.zeros(n)
-y_gp = np.zeros(n)
+y_NN = np.zeros(n)
 _, rho_sym, ig_sym, fwi_sym, ws_sym = results_symReg['x']
-_, rho_gp, ig_gp, fwi_gp, ws_gp = results_gp['x']
+_, rho_NN, ig_NN, fwi_NN, ws_NN = results_NN['x']
 for i in range(n):
     df = pd.DataFrame(np.array([x_sym[i], rho_sym, ig_sym, fwi_sym, ws_sym]).reshape(1, -1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
     y_sym[i] = np.sum(symReg.predict(df))
-    df = pd.DataFrame(np.array([x_gp[i], rho_gp, ig_gp, fwi_gp, ws_gp]).reshape(1, -1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
-    y_gp[i] = np.sum(gp.predict(df))
+    df = pd.DataFrame(np.array([x_NN[i], rho_NN, ig_NN, fwi_NN, ws_NN]).reshape(1, -1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
+    y_NN[i] = np.sum(NN.predict(df))
 
 fig, ax = plt.subplots()
 ax.plot(x_sym, y_sym[::-1], 'b-o', label="Symbolic Regression")
-ax.plot(x_gp, y_gp[::-1], 'r-o', label="Gaussian Process Regression")
+ax.plot(x_NN, y_NN[::-1], 'r-o', label="Neural Network")
 ax.legend(loc='upper right')  
-ax.set_xlim([0, np.max((np.max(x_sym), np.max(x_gp)))])
-ax.set_ylim([0, np.max((np.max(y_sym), np.max(y_gp)))])
+# ax.set_xlim([0, np.max((np.max(x_sym), np.max(x_NN)))])
+# ax.set_ylim([0, np.max((np.max(y_sym), np.max(y_NN)))])
 ax.set_xlabel('X position [Unit cell lengths]')
 ax.set_ylabel('Velcoity [lattice lengths / timestep]')
 

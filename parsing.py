@@ -3,44 +3,35 @@ import pandas as pd
 
 data = dict()
 
-with open("formatting.csv", 'r') as f:
+with open("Data_00-10.csv", 'r') as f:
     for line in f.readlines():
         l = line.strip().split(',')
         contents = list(filter(lambda x: x != '', l))
-        if contents[0].strip() == 'SIMULATION':
-            for sim in contents[1:]:
+        if l[0].strip() == 'SIMULATION':
+            for sim in contents[2:]:
                 data[int(sim)] = dict()
-        elif contents[0].strip() == 'DENSITY':
+        elif l[0].strip() == 'DENSITY' or l[0].strip() == 'INCLINE FACTOR'\
+            or l[0].strip() == 'FLUID-WALL INTERACTION' or l[0].strip() == 'WALL SPEED':
             for i, (key, d) in enumerate(data.items()):
-                d[contents[0].strip()] = [contents[2*i + 1]]
-                d[contents[0].strip()].append(contents[2*i + 2])
-        elif contents[0].strip() == 'INCLINE FACTOR':
-            for i, (key, d) in enumerate(data.items()):
-                d[contents[0].strip()] = [contents[2*i + 1]]
-                d[contents[0].strip()].append(contents[2*i + 2])
-        elif contents[0].strip() == 'FLUID-WALL INTERACTION':
-            for i, (key, d) in enumerate(data.items()):
-                d[contents[0].strip()] = [contents[2*i + 1]]
-                d[contents[0].strip()].append(contents[2*i + 2])
-        elif contents[0].strip() == 'WALL SPEED':
-            for i, (key, d) in enumerate(data.items()):
-                d[contents[0].strip()] = [contents[2*i + 1]]
-                d[contents[0].strip()].append(contents[2*i + 2])
-        elif contents[0].strip() != 'X':
+                d[contents[0].strip()] = float(contents[i+2])
+        elif l[2].strip() != 'X':
             for i, (key, d) in enumerate(data.items()):
                 if 'X' not in d.keys():
-                    d['X'] = [contents[2*i]]
-                    d['Vx'] = [contents[2*i+1]]
+                    d['X'] = [float(l[2*i+4])]
+                    d['Vx'] = [float(l[2*i+5])]
                 else:
-                    d['X'].append(contents[2*i])
-                    d['Vx'].append(contents[2*i+1])
-print(data)
+                    try:
+                        d['X'].append(float(l[2*i+4]))
+                        d['Vx'].append(float(l[2*i+5]))
+                    except:
+                        continue
+# print(data)
 temp = []
 for key, d in data.items():
-    density = d['DENSITY'][0]
-    incline = d['INCLINE FACTOR'][0]
-    interaction = d['FLUID-WALL INTERACTION'][0]
-    speed = d['WALL SPEED'][0]
+    density = d['DENSITY']
+    incline = d['INCLINE FACTOR']
+    interaction = d['FLUID-WALL INTERACTION']
+    speed = d['WALL SPEED']
     for x, v in zip(d['X'], d['Vx'][::-1]):
         temp.append([x, density, incline, interaction, speed, v])
 
