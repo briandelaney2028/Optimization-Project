@@ -70,39 +70,60 @@ if __name__=="__main__":
     X = data.drop('Vx', axis=1).values
     y = data['Vx'].values
 
-    # Break up into test and training data
-    # X_train, X_test, y_train, y_test = train_test_split(X, y,
-    #                                                     test_size=0.1,
-    #                                                     shuffle=True)
+    layer1s = [25, 20, 15]#[75, 50]
+    layer2s = [15, 10]#[50, 40, 30]
+    layer3s = [10, 5]#[20, 10]
+    metrics = {}
+    for layer1 in layer1s:
+        for layer2 in layer2s:
+            for layer3 in layer3s:
+                
+                # Break up into test and training data
+                X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                                    test_size=0.1,
+                                                                    shuffle=True)
 
-    # NN = NeuralNetwork((30, 20)) # compare (40, 20)
-    # history = NN.fit(X_train, y_train, 
-    #                  learning_rate = 0.001,
-    #                  epochs = 100,
-    #                  batch_size = 64,
-    #                  validation_data=(X_test, y_test), 
-    #                  return_history=True)
-    
-    # preds = NN.predict(X_test)
+                NN = NeuralNetwork((layer1, layer2, layer3)) 
+                history = NN.fit(X_train, y_train, 
+                                learning_rate = 0.001,
+                                epochs = 20,
+                                batch_size = 64,
+                                validation_data=(X_test, y_test), 
+                                return_history=True)
+                
+                preds = NN.predict(X_test)
+                r2 = r2_score(y_test, preds)
+                mae = mean_absolute_error(y_test, preds)
+                rmse = np.power(mean_squared_error(y_test, preds), 0.5)
+
+                metrics[(layer1, layer2, layer3)] = {"R2":r2,
+                                               "MAE":mae,
+                                               "RMSE":rmse}
+
+
+    for key, d in metrics.items():
+        print("Layers: {} -------------".format(key))
+        for metric, value in d.items():
+            print("\t{:>4}: {:.5f}".format(metric, value))
 
     # print("R2:", r2_score(y_test, preds))
     # print("MAE:", mean_absolute_error(y_test, preds))
     # print("RMSE:", np.power(mean_squared_error(y_test, preds), 0.5))
 
-    # plt.plot(history.history['loss'], label="Training Loss")
-    # plt.plot(history.history['val_loss'], label="Validation Loss")
-    # plt.xlabel("Epochs")
-    # plt.ylabel("Loss")
-    # plt.legend(loc="upper right")
-    # plt.show()
+    plt.plot(history.history['loss'], label="Training Loss")
+    plt.plot(history.history['val_loss'], label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend(loc="upper right")
+    plt.show()
 
     # test loading
-    NN = NeuralNetwork()
-    NN.load("NN.keras")
+    # NN = NeuralNetwork()
+    # NN.load("NN.keras")
     # print(X)
     # preds = NN.predict(X)
     # print(r2_score(y, preds))
     
-    v_wall = 1.2
-    func_NN = lambda x: np.power(NN.predict(x) - v_wall, 2)
-    print(func_NN(np.array([4.32, 0.8, 0.3, 1.0, 0.75]).reshape(1,-1)))
+    # v_wall = 1.2
+    # func_NN = lambda x: np.power(NN.predict(x) - v_wall, 2)
+    # print(func_NN(np.array([4.32, 0.8, 0.3, 1.0, 0.75]).reshape(1,-1)))

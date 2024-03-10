@@ -35,7 +35,7 @@ options = {
 }
 
 # Target wall speed
-v_wall = 1.1
+v_wall = 0.9
 # Target delta x
 delta_x = 300
 # tolerance
@@ -53,7 +53,7 @@ c = LinearConstraint(A, lb, ub)
 # optimization function for Symbolic Regression
 def func_symReg(x):
     x = np.array(x).reshape(1,-1)
-    df = pd.DataFrame(x, columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
+    df = pd.DataFrame(x, columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
     return np.power(symReg.predict(df)-v_wall, 2)
 
 # nonlinear constraints for Symbolic Regression
@@ -61,7 +61,7 @@ def noncon_sym(x):
     x_prime = np.zeros(5)
     for i in range(1, 5):
         x_prime[i] = x[i]
-    df = pd.DataFrame(x_prime.reshape(1,-1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
+    df = pd.DataFrame(x_prime.reshape(1,-1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
     return symReg.predict(df)
 nc_sym = NonlinearConstraint(noncon_sym, -0.1, 0.1)
 
@@ -96,14 +96,18 @@ results_NN = minimize(
     constraints=(c, nc_NN)
 )
 
-for key in results_NN.keys():
-    print("-------------- {} --------------".format(key))
-    print("Symbolic Regression: {}".format(results_symReg[key]))
-    print("Neural Network     : {}".format(results_NN[key]))
+with open('optimization_results.txt', 'w') as f:
+    for key in results_NN.keys():
+        print("-------------- {} --------------".format(key))
+        f.write("-------------- {} --------------\n".format(key))
+        print("Symbolic Regression: {}".format(results_symReg[key]))
+        f.write("Symbolic Regression: {}\n".format(results_symReg[key]))
+        print("Neural Network     : {}".format(results_NN[key]))
+        f.write("Neural Network     : {}\n".format(results_NN[key]))
 
 
 # plotting
-n = 10
+n = 100
 x_sym = np.linspace(0, results_symReg['x'][0], n)
 x_NN = np.linspace(0, results_NN['x'][0], n)
 y_sym = np.zeros(n)
@@ -119,7 +123,7 @@ for i in range(n):
 fig, ax = plt.subplots()
 ax.plot(x_sym, y_sym[::-1], 'b-o', label="Symbolic Regression")
 ax.plot(x_NN, y_NN[::-1], 'r-o', label="Neural Network")
-ax.legend(loc='upper right')  
+ax.legend(loc='lower left')  
 # ax.set_xlim([0, np.max((np.max(x_sym), np.max(x_NN)))])
 # ax.set_ylim([0, np.max((np.max(y_sym), np.max(y_NN)))])
 ax.set_xlabel('X position [Unit cell lengths]')

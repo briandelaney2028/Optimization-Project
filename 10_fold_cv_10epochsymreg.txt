@@ -1,0 +1,7 @@
+Avg Symbolic Regression Test RMSE: 0.07725705612786979
+Avg Symbolic Regression Test MAE: 0.05137509038677797
+Avg Symbolic Regression Test R2: 0.8637676721605295
+------------------------------------------
+Avg Neural Network Test RMSE: 0.07596741502624425
+Avg Neural Network Test MAE: 0.05163059864571671
+Avg Neural Network Test R2: 0.8726896731504776

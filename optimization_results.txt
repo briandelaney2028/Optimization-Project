@@ -1,0 +1,28 @@
+-------------- x --------------
+Symbolic Regression: [300.           0.8          0.3          0.95         0.76162573]
+Neural Network     : [300.     0.8    0.3    0.95   0.75]
+-------------- fun --------------
+Symbolic Regression: 5.127509877792739e-18
+Neural Network     : 7.842976629035547e-05
+-------------- jac --------------
+Symbolic Regression: [0.00000000e+00 0.00000000e+00 0.00000000e+00 0.00000000e+00
+ 1.48859986e-08]
+Neural Network     : [0. 0. 0. 0. 0.]
+-------------- nit --------------
+Symbolic Regression: 2
+Neural Network     : 1
+-------------- nfev --------------
+Symbolic Regression: 13
+Neural Network     : 6
+-------------- njev --------------
+Symbolic Regression: 2
+Neural Network     : 1
+-------------- status --------------
+Symbolic Regression: 0
+Neural Network     : 0
+-------------- message --------------
+Symbolic Regression: Optimization terminated successfully
+Neural Network     : Optimization terminated successfully
+-------------- success --------------
+Symbolic Regression: True
+Neural Network     : True

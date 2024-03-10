@@ -3,7 +3,7 @@ from generate_data import generate_data
 
 def custom_filter(model):
     l = ''.join(model.fnames)
-    return 'gaussian' not in l
+    return 'gaussian' not in l and 'tanh' not in l
 
 class SymReg(object):
     def __init__(self, epochs=10, complexity=10):
@@ -75,13 +75,17 @@ if __name__ == "__main__":
     import pandas as pd
     import numpy as np
     import matplotlib.pyplot as plt
-    x_plot = np.linspace(0, 300, 301)
-    y_plot = np.zeros_like(x_plot)
+    # x_plot = np.linspace(0, 300, 301)
+    # y_plot = np.zeros_like(x_plot)
     symReg = feyn.Model.load('symReg.json')
-    for i in range(x_plot.size):
-        df = pd.DataFrame(np.array([[x_plot[i], 0.8, 0.196, 1, 1]]), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
-        y_plot[i] = symReg.predict(df)
+    # for i in range(x_plot.size):
+    #     df = pd.DataFrame(np.array([[x_plot[i], 0.8, 0.196, 1, 1]]), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
+    #     y_plot[i] = symReg.predict(df)
 
-    fig, ax = plt.subplots()
-    ax.plot(x_plot, y_plot, label='Symbolic Regression')
-    plt.show()
+    # fig, ax = plt.subplots()
+    # ax.plot(x_plot, y_plot, label='Symbolic Regression')
+    # plt.show()
+
+    sympy_model = symReg.sympify(symbolic_lr=True, include_weights=True)
+    print(sympy_model.as_expr())
+    symReg.savefig('symReg.svg')

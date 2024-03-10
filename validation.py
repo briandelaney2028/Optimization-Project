@@ -20,18 +20,26 @@ cv_symReg = cross_validate(
     fit_params={'epochs':10,
             'complexity':10},
     scoring=('neg_root_mean_squared_error',
-             'neg_mean_absolute_error'),
+             'neg_mean_absolute_error',
+             'r2'),
     cv=10,
     return_train_score=True
 )
 
 print(cv_symReg)
-print("Avg Symbolic Regression Test RMSE: {}".format(np.mean(cv_symReg['test_neg_root_mean_squared_error'])))
-print("Avg Symbolic Regression Test MAE: {}".format(np.mean(cv_symReg['test_neg_mean_absolute_error'])))
+print("Avg Symbolic Regression Test RMSE: {}".format(-1*np.mean(cv_symReg['test_neg_root_mean_squared_error'])))
+print("Avg Symbolic Regression Test MAE: {}".format(-1*np.mean(cv_symReg['test_neg_mean_absolute_error'])))
+print("Avg Symbolic Regression Test R2: {}".format(np.mean(cv_symReg['test_r2'])))
+with open('10_fold_cv.txt', 'w') as f:
+    f.write("Avg Symbolic Regression Test RMSE: {}\n".format(-1*np.mean(cv_symReg['test_neg_root_mean_squared_error'])))
+    f.write("Avg Symbolic Regression Test MAE: {}\n".format(-1*np.mean(cv_symReg['test_neg_mean_absolute_error'])))
+    f.write("Avg Symbolic Regression Test R2: {}\n".format(np.mean(cv_symReg['test_r2'])))
+    f.write("------------------------------------------\n")
+
 
 X = data.drop('Vx', axis=1).values
 # cross validation Neural Network
-NN = NeuralNet.NeuralNetwork((30, 20))
+NN = NeuralNet.NeuralNetwork((25, 10, 10))
 
 cv_NN = cross_validate(
     NN,
@@ -40,14 +48,19 @@ cv_NN = cross_validate(
     fit_params={'epochs':20,
                 'batch_size':64,
                 'learning_rate':0.001},
-    scoring=('root_mean_squared_error',
-             'mean_absolute_error'),
-    cv=5,
+    scoring=('neg_root_mean_squared_error',
+             'neg_mean_absolute_error',
+             'r2'),
+    cv=10,
     return_train_score=True
 )
 
 print(cv_NN)
-print("Avg Neural Network Test RMSE: {}".format(np.mean(cv_NN['test_root_mean_squared_error'])))
-print("Avg Neural Network Test MAE: {}".format(np.mean(cv_NN['test_mean_absolute_error'])))
-
+print("Avg Neural Network Test RMSE: {}".format(-1*np.mean(cv_NN['test_neg_root_mean_squared_error'])))
+print("Avg Neural Network Test MAE: {}".format(-1*np.mean(cv_NN['test_neg_mean_absolute_error'])))
+print("Avg Neural Network Test R2: {}".format(np.mean(cv_NN['test_r2'])))
+with open('10_fold_cv.txt', 'a') as f:
+    f.write("Avg Neural Network Test RMSE: {}\n".format(-1*np.mean(cv_NN['test_neg_root_mean_squared_error'])))
+    f.write("Avg Neural Network Test MAE: {}\n".format(-1*np.mean(cv_NN['test_neg_mean_absolute_error'])))
+    f.write("Avg Neural Network Test R2: {}\n".format(np.mean(cv_NN['test_r2'])))
 

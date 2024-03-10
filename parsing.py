@@ -3,7 +3,7 @@ import pandas as pd
 
 data = dict()
 
-with open("Data_00-10.csv", 'r') as f:
+with open("Master.csv", 'r') as f:
     for line in f.readlines():
         l = line.strip().split(',')
         contents = list(filter(lambda x: x != '', l))
