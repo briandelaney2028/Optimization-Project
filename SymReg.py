@@ -1,15 +1,19 @@
 import feyn
-from generate_data import generate_data
+import pandas as pd
 
+# filter out models with Gaussian distributions or hyperbolic tangent
 def custom_filter(model):
     l = ''.join(model.fnames)
     return 'gaussian' not in l and 'tanh' not in l
 
+# class for Symbolic Regression
 class SymReg(object):
+    _estimator_type = 'regressor'
     def __init__(self, epochs=10, complexity=10):
         self.n_epochs = epochs
         self.complexity = complexity
 
+        # establish QLattice
         self.ql = feyn.QLattice(random_seed=1)
         self.models = []
         self.best = None
@@ -17,10 +21,14 @@ class SymReg(object):
     def get_params(self, deep=False):
         return {'epochs':self.n_epochs, 'complexity':self.complexity}
     
+    # fit function
     def fit(self, X, y, **kwargs):
-        self.n_epochs = kwargs['epochs']
-        self.complexity = kwargs['complexity']
-
+        if 'epochs' in kwargs.keys():
+            self.n_epochs = kwargs['epochs']
+        if 'complexity' in kwargs.keys():
+            self.complexity = kwargs['complexity']
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
         X['y'] = y
 
         for epoch in range(1, self.n_epochs+1):
@@ -48,12 +56,6 @@ class SymReg(object):
             # prune poorly performing models
             self.models = feyn.prune_models(self.models)
 
-            # increase diversity of models
-            # models = feyn.get_diverse_models(
-            #     models=models,
-            #     n=10
-            # )
-    
             # display progress
             if len(self.models) > 0:
                 feyn.show_model(self.models[0], feyn.tools.get_progress_label(epoch, self.n_epochs), update_display=False)
@@ -61,31 +63,20 @@ class SymReg(object):
             # update probability density function to improve structures
             self.ql.update(self.models)
 
-   
         # select best model
         self.best = self.models[0]
 
     def predict(self, X):
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
         return self.best.predict(X)
 
     def save_model(self, fname):
         self.best.save(fname)
 
 if __name__ == "__main__":
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-    # x_plot = np.linspace(0, 300, 301)
-    # y_plot = np.zeros_like(x_plot)
+    # generate tree structure and equation of model
     symReg = feyn.Model.load('symReg.json')
-    # for i in range(x_plot.size):
-    #     df = pd.DataFrame(np.array([[x_plot[i], 0.8, 0.196, 1, 1]]), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPPED'])
-    #     y_plot[i] = symReg.predict(df)
-
-    # fig, ax = plt.subplots()
-    # ax.plot(x_plot, y_plot, label='Symbolic Regression')
-    # plt.show()
-
     sympy_model = symReg.sympify(symbolic_lr=True, include_weights=True)
     print(sympy_model.as_expr())
     symReg.savefig('symReg.svg')

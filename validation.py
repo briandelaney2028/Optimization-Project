@@ -3,12 +3,44 @@ import NeuralNet
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import cross_validate
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+from mlxtend.evaluate import paired_ttest_5x2cv, paired_ttest_kfold_cv
 
+# load LAMMPS data
 data = pd.read_csv("prepped_data.csv")
 X = data.drop('Vx', axis=1)
 y = data['Vx'].values
+
+sym1 = SymReg.SymReg()
+sym2 = SymReg.SymReg(epochs=5, complexity=5)
+
+NN1 = NeuralNet.NeuralNetwork(layers=(25, 10, 10))
+NN2 = NeuralNet.NeuralNetwork(layers=(25, 15, 10))
+
+# 10-fold paired t-test for SR
+t, p = paired_ttest_kfold_cv(
+    estimator1=sym1,
+    estimator2=sym2,
+    X=X,
+    y=y,
+    cv=10,
+    random_seed=20
+)
+
+print("t statistic:", t)
+print("p-value:", p)
+
+# 10-fold paired t-test for ANN
+t, p = paired_ttest_kfold_cv(
+    estimator1=NN1,
+    estimator2=NN2,
+    X=X,
+    y=y,
+    cv=10,
+    random_seed=20
+)
+
+print("t statistic:", t)
+print("p-value:", p)
 
 # cross validation Symbolic Regression
 symReg = SymReg.SymReg()
@@ -64,3 +96,16 @@ with open('10_fold_cv.txt', 'a') as f:
     f.write("Avg Neural Network Test MAE: {}\n".format(-1*np.mean(cv_NN['test_neg_mean_absolute_error'])))
     f.write("Avg Neural Network Test R2: {}\n".format(np.mean(cv_NN['test_r2'])))
 
+
+# 10-fold paired t-test for SR against ANN
+t, p = paired_ttest_kfold_cv(
+    estimator1=NN,
+    estimator2=symReg,
+    X=X,
+    y=y,
+    cv=10,
+    random_seed=20
+)
+
+print("t statistic:", t)
+print("p-value:", p)

@@ -1,15 +1,11 @@
 import NeuralNet
 import feyn
-from scipy.optimize import minimize, LinearConstraint, NonlinearConstraint
+from scipy.optimize import minimize, NonlinearConstraint
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-data = pd.read_csv("prepped_data.csv")
-X = data.drop('Vx', axis=1)
-y = data['Vx'].values
-
-# lead Symbolic Regressor
+# load Symbolic Regressor
 symReg = feyn.Model.load('symReg.json')
 
 # load Neural Network
@@ -17,13 +13,11 @@ NN = NeuralNet.NeuralNetwork()
 NN.load("NN.keras")
 
 # intial guess
-# [X, Density, Incline Factor, Fluid-Wall Interaction, Wall Speed]
-x0 = np.array([300.0, 0.8, 0.3, 0.95, 0.75])
-
+# [Density, Incline Factor, Fluid-Wall Interaction, Wall Speed]
+x0 = np.array([0.85, 0.48, 1.0, 0.95])
 
 # define bounds
-bounds = ((0.0, 400.0), # X
-          (0.75, 0.85), # Density
+bounds = ((0.75, 0.85), # Density
           (0.133, 0.5), # Incline Factor
           (0.9, 1.0),   # Fluid-Wall Interaction
           (0.5, 1.0))   # Wall Speed
@@ -31,39 +25,38 @@ bounds = ((0.0, 400.0), # X
 # optimization options
 options = {
     'maxiter':100,
-    'disp':True
+    'disp':True,
+    'ftol':1e-4
 }
 
 # Target wall speed
 v_wall = 0.9
 # Target delta x
-delta_x = 300
+delta_x = 100
 # tolerance
 epsilon = 0.01
 
-# Linear constraints
-A = np.array([
-    [1, 0, 0, 0, 0],
-    [1, 0, 0, 0, 0]
-])
-lb = np.array([delta_x - epsilon])
-ub = np.array([delta_x + epsilon])
-c = LinearConstraint(A, lb, ub)
-
 # optimization function for Symbolic Regression
 def func_symReg(x):
-    x = np.array(x).reshape(1,-1)
-    df = pd.DataFrame(x, columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
+    # append the target delta x to x array
+    x_prime = np.ones(x.size+1) * delta_x
+    for i in range(x.size):
+        x_prime[i+1] = x[i]
+    # needs dataframe
+    df = pd.DataFrame(x_prime.reshape(1,-1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
     return np.power(symReg.predict(df)-v_wall, 2)
 
 # nonlinear constraints for Symbolic Regression
 def noncon_sym(x):
     x_prime = np.zeros(5)
+    # append the target delta x to x array
     for i in range(1, 5):
-        x_prime[i] = x[i]
-    df = pd.DataFrame(x_prime.reshape(1,-1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
+        x_prime[i] = x[i-1]
+    # needs dataframe
+    df = pd.DataFrame(x_prime.reshape(1, -1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
     return symReg.predict(df)
-nc_sym = NonlinearConstraint(noncon_sym, -0.1, 0.1)
+# Nonlinear constraint
+nc_sym = NonlinearConstraint(noncon_sym, -epsilon, epsilon)
 
 # Symbolic Regression optimizaiton
 results_symReg = minimize(
@@ -72,19 +65,25 @@ results_symReg = minimize(
     method='SLSQP',
     bounds=bounds,
     options=options,
-    constraints=(c, nc_sym)
+    constraints=nc_sym
 )
 
 # optimization function for Neural Network 
-func_NN = lambda x: np.power(NN.predict(x.reshape(1, -1)) - v_wall, 2)
+def func_NN(x):
+    # append the target delta x to x array
+    x_prime = np.ones(x.size+1) * delta_x
+    for i in range(x.size):
+        x_prime[i+1] = x[i]
+    return np.power(NN.predict(x_prime.reshape(1, -1)) - v_wall, 2)
 
 # nonlinear constraints for Neural Network
 def noncon_NN(x):
+    # append the target delta x to x array
     x_prime = np.zeros(5)
     for i in range(1, 5):
-        x_prime[i] = x[i]
+        x_prime[i] = x[i-1]
     return np.sum(NN.predict(x_prime.reshape(1, -1)))
-nc_NN = NonlinearConstraint(noncon_NN, -0.1, 0.1)
+nc_NN = NonlinearConstraint(noncon_NN, -epsilon, epsilon)
 
 # Neural Network optimization
 results_NN = minimize(
@@ -93,9 +92,10 @@ results_NN = minimize(
     method='SLSQP',
     bounds=bounds,
     options=options,
-    constraints=(c, nc_NN)
+    constraints=nc_NN
 )
 
+# save results
 with open('optimization_results.txt', 'w') as f:
     for key in results_NN.keys():
         print("-------------- {} --------------".format(key))
@@ -105,15 +105,14 @@ with open('optimization_results.txt', 'w') as f:
         print("Neural Network     : {}".format(results_NN[key]))
         f.write("Neural Network     : {}\n".format(results_NN[key]))
 
-
-# plotting
+# plot results
 n = 100
-x_sym = np.linspace(0, results_symReg['x'][0], n)
-x_NN = np.linspace(0, results_NN['x'][0], n)
+x_sym = np.linspace(0, delta_x, n)
+x_NN = np.linspace(0, delta_x, n)
 y_sym = np.zeros(n)
 y_NN = np.zeros(n)
-_, rho_sym, ig_sym, fwi_sym, ws_sym = results_symReg['x']
-_, rho_NN, ig_NN, fwi_NN, ws_NN = results_NN['x']
+rho_sym, ig_sym, fwi_sym, ws_sym = results_symReg['x']
+rho_NN, ig_NN, fwi_NN, ws_NN = results_NN['x']
 for i in range(n):
     df = pd.DataFrame(np.array([x_sym[i], rho_sym, ig_sym, fwi_sym, ws_sym]).reshape(1, -1), columns=['X', 'DENSITY', 'INCLINE FACTOR', 'FLUID-WALL INTERACTION', 'WALL SPEED'])
     y_sym[i] = np.sum(symReg.predict(df))
@@ -131,3 +130,8 @@ ax.set_ylabel('Velcoity [lattice lengths / timestep]')
 
 fig.savefig('Optimization_Comparison.png', dpi=1000)
 
+# save plotting data
+dir = "tolerance/"
+run = "x1"
+np.savetxt(dir+"sym_"+run, np.column_stack((x_sym, y_sym)), delimiter=',', header='x, y', comments='')
+np.savetxt(dir+"NN_"+run, np.column_stack((x_NN, y_NN)), delimiter=',', header='x, y', comments='')
